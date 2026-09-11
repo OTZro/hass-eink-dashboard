@@ -36,6 +36,9 @@ from .heading import _build_heading_context
 from .sensor import _build_sensor_context
 from .separator import _build_separator_context
 from .tile import _build_tile_context
+from .todo import (
+    _build_todo_context,
+)
 from .waste_schedule import (
     _build_waste_schedule_context,
 )
@@ -53,6 +56,7 @@ __all__ = [
     "_build_sensor_context",
     "_build_separator_context",
     "_build_tile_context",
+    "_build_todo_context",
     "_build_waste_schedule_context",
     "_build_weather_context",
 ]

@@ -466,6 +466,7 @@ from .widgets import (  # noqa: E402
     _build_sensor_context,
     _build_separator_context,
     _build_tile_context,
+    _build_todo_context,
     _build_waste_schedule_context,
     _build_weather_context,
 )
@@ -482,6 +483,7 @@ _SVG_RENDERERS: dict[str, SvgContextFn] = {
     WidgetType.SENSOR: _build_sensor_context,
     WidgetType.SEPARATOR: _build_separator_context,
     WidgetType.TILE: _build_tile_context,
+    WidgetType.TODO: _build_todo_context,
     WidgetType.WASTE_SCHEDULE: _build_waste_schedule_context,
     WidgetType.WEATHER: _build_weather_context,
 }

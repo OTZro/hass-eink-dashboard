@@ -212,6 +212,41 @@ class EinkDashboardImage(ImageEntity):
             resolved.append(widget)
         return resolved
 
+    async def _async_fetch_todo_items(self) -> dict:
+        """Fetch the items of every to-do list used by a todo widget.
+
+        Home Assistant's todo entities only expose the *count* of open
+        items as their state; the items themselves come from the
+        ``todo.get_items`` service response.  The SVG layer has no
+        access to hass, so the items are collected here and handed to
+        the widget through the display config.
+        """
+        result: dict[str, list] = {}
+        entity_ids = {
+            w.get("entity")
+            for w in (self._widgets or [])
+            if w.get("type") == "todo" and w.get("entity")
+        }
+        for entity_id in entity_ids:
+            try:
+                response = await self.hass.services.async_call(
+                    "todo",
+                    "get_items",
+                    {"entity_id": entity_id},
+                    blocking=True,
+                    return_response=True,
+                )
+            except Exception:  # noqa: BLE001 - never break the render
+                _LOGGER.warning(
+                    "todo.get_items failed for %s; widget will be empty",
+                    entity_id,
+                )
+                continue
+            result[entity_id] = (response or {}).get(entity_id, {}).get(
+                "items", []
+            )
+        return result
+
     async def _async_refresh(self, _now: Any) -> None:
         """Re-render the dashboard and push to webhooks if the image
         changed.
@@ -286,6 +321,7 @@ class EinkDashboardImage(ImageEntity):
                 if level is not None:
                     config["device_battery_level"] = level
                     config["device_battery_charging"] = is_charging
+                config["todo_items"] = await self._async_fetch_todo_items()
                 widgets = self._resolve_templates(self._widgets)
                 _LOGGER.debug(
                     "_async_refresh: rendering %d widgets at %dx%d",
