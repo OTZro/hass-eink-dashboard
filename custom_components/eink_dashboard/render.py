@@ -639,6 +639,7 @@ _RELATIVE_DAY_PHRASES: dict[str, tuple[str, str, str]] = {
     "da": ("i dag", "i morgen", "om {n} dage"),
     "sv": ("idag", "imorgon", "om {n} dagar"),
     "nb": ("i dag", "i morgen", "om {n} dager"),
+    "zh": ("今天", "明天", "{n} 天後"),
 }
 
 
