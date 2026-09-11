@@ -60,9 +60,60 @@ _ACTIVE_STATES: frozenset[str] = frozenset(
 )
 
 
+def _text_width(text: str, font, font_size: int) -> int:
+    """Measure *text* in pixels, counting CJK characters as one em.
+
+    ``_load_font`` only ever loads Roboto, which has no CJK glyphs, so
+    ``font.getlength()`` on Chinese text comes back near zero and any
+    width check based on it silently passes.  The actual rendering uses
+    the CJK font from ``font_dir``.  CJK glyphs are full-width by
+    definition, so charging one em per CJK codepoint and measuring the
+    rest with Roboto matches the rendered width closely enough to
+    decide where to cut.
+    """
+    cjk = 0
+    rest = []
+    for ch in text:
+        # CJK 及全形標點、假名、注音等等都算全形
+        if (
+            "\u2e80" <= ch <= "\u9fff"
+            or "\uf900" <= ch <= "\ufaff"
+            or "\ufe30" <= ch <= "\ufe4f"
+            or "\uff00" <= ch <= "\uff60"
+            or "\uffe0" <= ch <= "\uffe6"
+        ):
+            cjk += 1
+        else:
+            rest.append(ch)
+    return cjk * font_size + round(font.getlength("".join(rest)))
+
+
+def _fit_text(text: str, font, font_size: int, max_w: int) -> str:
+    """Trim *text* with an ellipsis so it fits into *max_w* pixels.
+
+    card_row 的巨集不會截斷文字：主要文字靠左、value 靠右，兩邊各畫各的。
+    行程標題一長就會壓到右邊的日期（實際發生過，「住宿:麗豪航天城飯店（香港,
+    轉機過夜,訂單HYH238…」直接蓋在 9/14 上面）。所以在組 context 的時候就把
+    主要文字量好、切好。
+    """
+    if not text or max_w <= 0:
+        return text
+    if _text_width(text, font, font_size) <= max_w:
+        return text
+    ellipsis = "\u2026"
+    ell_w = _text_width(ellipsis, font, font_size)
+    out = ""
+    for ch in text:
+        if _text_width(out + ch, font, font_size) + ell_w > max_w:
+            break
+        out += ch
+    return (out + ellipsis) if out else ellipsis
+
+
 def _title_layout(
     title: str,
     svg_h: int,
+    font_size: int | None = None,
 ) -> tuple[int, int, int]:
     """Return (title_font_sz, content_y, content_h) for a titled widget.
 
@@ -83,7 +134,13 @@ def _title_layout(
     """
     if not title:
         return 0, 0, svg_h
-    font_sz = max(10, round(svg_h * 0.14))
+    # 預設跟著 widget 高度縮放，但高的 widget（例如佔了半個畫面的行程列表）
+    # 標題會大到喧賓奪主，所以開放用 title_font_size 明確指定。
+    font_sz = (
+        max(10, int(font_size))
+        if font_size
+        else max(10, round(svg_h * 0.14))
+    )
     advance = round(font_sz * 1.4)
     return font_sz, advance, svg_h - advance
 
